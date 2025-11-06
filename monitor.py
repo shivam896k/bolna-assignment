@@ -65,13 +65,13 @@ class StatusMonitor:
 
     def check_status(self, app):
         """
-        Check if an app's status endpoint is up.
+        Check if an app's is working fine or not.
 
         Args:
             app: Dict with 'name' and 'url' keys
 
         Returns:
-            True if app is up, False otherwise
+            failure data if error else {}
         """
         try:
             data = MonitorFactory.fetch_transactions(source=app['name'], base_url=app['url'])
@@ -90,8 +90,6 @@ class StatusMonitor:
         If an app is down, queues it for child workers to monitor.
         Also processes recovery notifications from child workers.
         """
-        logger.info("Main worker started")
-
         while self.running:
             # Check for recovered apps from child workers
             while not self.recovery_queue.empty():
@@ -119,8 +117,6 @@ class StatusMonitor:
                 #     continue
 
                 data = self.check_status(app)
-                # import pdb
-                # pdb.set_trace()
 
                 if data and data['status'] != 'resolved':
                     logger.info(f"[{datetime.now()}] product: {data['name']}")
@@ -132,11 +128,6 @@ class StatusMonitor:
                 else:
                     self.increase_backoff(app['name'])
 
-            # Sleep briefly to avoid busy waiting
-            time.sleep(0.5)
-
-        logger.info("Main worker stopped")
-
     def child_worker(self, worker_id: int):
         """
         Child worker thread that monitors apps with downtime.
@@ -145,8 +136,6 @@ class StatusMonitor:
         Args:
             worker_id: Unique identifier for this worker
         """
-        logger.info(f"Child worker {worker_id} started")
-
         while self.running:
             try:
                 # Get an app to monitor (blocks with timeout)
@@ -177,8 +166,6 @@ class StatusMonitor:
                 continue
             except Exception as e:
                 logger.error(f"Child worker {worker_id} error: {e}")
-
-        logger.info(f"Child worker {worker_id} stopped")
 
     def start(self):
         """Start all worker threads."""
