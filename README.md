@@ -4,13 +4,35 @@ A Python based system for monitoring API status and handling service degradation
 
 ## Project Overview
 
-This project implements a multi-threaded monitoring system that tracks the status of OpenAI's API status. It features:
+This project implements a multi-threaded monitoring system that tracks the status of OpenAI's API status.
 
-- Real-time monitoring of API health
-- Multi-threaded architecture for efficient monitoring
-- Exponential backoff strategy for failed requests
-- Intelligent response parsing and status tracking
-- Structured logging system
+## Key Components
+  - Main Worker Thread:
+    - Periodically checks all apps using exponential backoff (1-10 minutes)
+    - If an app fails, hands it off to child workers for intensive monitoring
+    - Processes recovery notifications when apps come back online
+  - Child Worker Threads:
+    - Monitor problematic apps more frequently (every 5 seconds)
+    - Continue checking until the app recovers
+    - Notify main worker when recovery occurs
+  - Exponential Backoff:
+    - Queue-based coordination: Uses separate queues for downtime detection and recovery notifications
+    - Thread-safe: Uses locks to protect shared state (monitoring apps, backoff tracking)
+    - Scalable: Configurable number of child workers
+    - Factory pattern integration: Uses MonitorFactory and ResponseParserFactory for extensibility
+## Workflow
+  - Main worker checks apps at increasing intervals
+  - When downtime detected → app moved to child workers
+  - Child workers monitor continuously until recovery
+  - On recovery → app returned to main worker with reset backoff
+
+
+## Features:
+  - Real-time monitoring of API health
+  - Multi-threaded architecture for efficient monitoring
+  - Exponential backoff strategy for failed requests
+  - Intelligent response parsing and status tracking
+  - Structured logging system
 
 Architecture Diagram
 ![Loading...](img/Untitled-2025-10-27-2256.png)
